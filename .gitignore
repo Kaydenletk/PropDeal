@@ -1,0 +1,33 @@
+# Terraform
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!example.tfvars
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Lambda artifacts
+lambdas/**/package/
+lambdas/**/*.zip
+
+# Secrets
+.env
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
