@@ -1,0 +1,61 @@
+name: terraform-plan
+
+on:
+  pull_request:
+    paths:
+      - 'iac/**'
+      - 'lambdas/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Terraform Init
+        working-directory: iac
+        run: terraform init
+
+      - name: Terraform Format Check
+        working-directory: iac
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        working-directory: iac
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: iac
+        id: plan
+        run: terraform plan -no-color -out=tfplan
+        continue-on-error: true
+
+      - name: Comment PR with plan
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `### Terraform Plan 📖
+            \`\`\`
+            ${{ steps.plan.outputs.stdout }}
+            \`\`\``;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output.slice(0, 65000)
+            });
