@@ -22,6 +22,42 @@ module "sqs" {
   name_prefix = var.project_name
 }
 
+module "load_lambda" {
+  source        = "./modules/lambda"
+  function_name = "${var.project_name}-load"
+  source_dir    = "${path.module}/../lambdas/load"
+  timeout       = 300
+  memory_size   = 512
+
+  vpc_config = {
+    subnet_ids         = module.vpc.private_subnet_ids
+    security_group_ids = [module.vpc.lambda_security_group_id]
+  }
+
+  dlq_arn = module.sqs.dlq_arn
+
+  inline_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject"]
+        Resource = "${module.s3.clean_bucket_arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = module.rds.secret_arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["sqs:SendMessage"]
+        Resource = module.sqs.dlq_arn
+      }
+    ]
+  })
+}
+
 module "enrich_lambda" {
   source        = "./modules/lambda"
   function_name = "${var.project_name}-enrich"
