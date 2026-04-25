@@ -22,6 +22,12 @@ module "sqs" {
   name_prefix = var.project_name
 }
 
+module "eventbridge" {
+  source            = "./modules/eventbridge"
+  name_prefix       = var.project_name
+  state_machine_arn = module.step_functions.state_machine_arn
+}
+
 module "step_functions" {
   source               = "./modules/step-functions"
   name_prefix          = var.project_name
