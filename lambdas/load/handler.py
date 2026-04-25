@@ -12,15 +12,18 @@ logger.setLevel(logging.INFO)
 
 DB_SECRET_NAME = "proptech/rds/credentials"
 
+# TODO(Task 2): Lambda packaging must bundle sql/migrations/ at this relative path.
+# Without it, this read_text() raises FileNotFoundError at module import,
+# surfacing in Lambda as Runtime.ImportModuleError on cold start.
 MIGRATION_SQL = pathlib.Path(__file__).parent.joinpath(
     "../../sql/migrations/001_initial.sql"
 ).read_text()
 
-# Run only on first invocation per warm container
 _MIGRATED = False
 
 
-def ensure_schema(cur):
+def ensure_schema(cur: "psycopg.Cursor") -> None:
+    """Apply migration once per warm container."""
     global _MIGRATED
     if not _MIGRATED:
         cur.execute(MIGRATION_SQL)
