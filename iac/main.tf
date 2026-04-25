@@ -41,7 +41,7 @@ module "monitoring" {
 module "api_lambda" {
   source        = "./modules/lambda"
   function_name = "${var.project_name}-api"
-  source_dir    = "${path.module}/../lambdas/api"
+  source_dir    = "${path.module}/../lambdas/api/.build"
   timeout       = 30
   memory_size   = 256
 
@@ -88,7 +88,7 @@ module "step_functions" {
 module "load_lambda" {
   source        = "./modules/lambda"
   function_name = "${var.project_name}-load"
-  source_dir    = "${path.module}/../lambdas/load"
+  source_dir    = "${path.module}/../lambdas/load/.build"
   timeout       = 300
   memory_size   = 512
 
@@ -124,7 +124,7 @@ module "load_lambda" {
 module "enrich_lambda" {
   source        = "./modules/lambda"
   function_name = "${var.project_name}-enrich"
-  source_dir    = "${path.module}/../lambdas/enrich"
+  source_dir    = "${path.module}/../lambdas/enrich/.build"
   timeout       = 300
   memory_size   = 512
 
@@ -155,7 +155,7 @@ module "enrich_lambda" {
 module "transform_lambda" {
   source        = "./modules/lambda"
   function_name = "${var.project_name}-transform"
-  source_dir    = "${path.module}/../lambdas/transform"
+  source_dir    = "${path.module}/../lambdas/transform/.build"
   timeout       = 120
 
   dlq_arn = module.sqs.dlq_arn
@@ -185,7 +185,7 @@ module "transform_lambda" {
 module "fetch_lambda" {
   source        = "./modules/lambda"
   function_name = "${var.project_name}-fetch"
-  source_dir    = "${path.module}/../lambdas/fetch"
+  source_dir    = "${path.module}/../lambdas/fetch/.build"
   timeout       = 60
   memory_size   = 256
 

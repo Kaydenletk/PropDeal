@@ -12,12 +12,22 @@ logger.setLevel(logging.INFO)
 
 DB_SECRET_NAME = "proptech/rds/credentials"
 
-# TODO(Task 2): Lambda packaging must bundle sql/migrations/ at this relative path.
-# Without it, this read_text() raises FileNotFoundError at module import,
-# surfacing in Lambda as Runtime.ImportModuleError on cold start.
-MIGRATION_SQL = pathlib.Path(__file__).parent.joinpath(
-    "../../sql/migrations/001_initial.sql"
-).read_text()
+_HERE = pathlib.Path(__file__).parent
+# Try Lambda-packaged path first, fall back to source-repo path.
+# Packaging script bundles sql/migrations/ alongside handler.py inside the zip;
+# in the source repo the migrations live at <repo>/sql/migrations/ (../../ from handler).
+_MIGRATION_PATHS = [
+    _HERE / "sql" / "migrations" / "001_initial.sql",          # packaged
+    _HERE / ".." / ".." / "sql" / "migrations" / "001_initial.sql",  # source repo
+]
+for _p in _MIGRATION_PATHS:
+    if _p.exists():
+        MIGRATION_SQL = _p.read_text()
+        break
+else:
+    raise FileNotFoundError(
+        f"sql/migrations/001_initial.sql not found in any of {_MIGRATION_PATHS}"
+    )
 
 _MIGRATED = False
 
