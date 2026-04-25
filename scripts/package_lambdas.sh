@@ -7,7 +7,15 @@ for L in fetch transform enrich load api; do
   mkdir -p .build
   cp handler.py .build/
   if [ -s requirements.txt ] && grep -v '^#' requirements.txt | grep -q .; then
-    pip install -r requirements.txt -t .build/ --quiet --upgrade
+    # Force Lambda-compatible wheels (Linux x86_64, Python 3.12)
+    # Without these flags, macOS/arm64 dev machines pull native wheels that
+    # break at Lambda runtime with ImportError on binary extensions (psycopg).
+    pip install -r requirements.txt -t .build/ --quiet --upgrade \
+      --platform manylinux2014_x86_64 \
+      --python-version 3.12 \
+      --only-binary=:all: \
+      --implementation cp \
+      --abi cp312
   fi
   # Critical for Task 1: load Lambda needs sql/migrations bundled
   if [ "$L" = "load" ]; then
