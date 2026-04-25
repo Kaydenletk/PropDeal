@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import pathlib
 from contextlib import contextmanager
 
 import boto3
@@ -11,32 +12,19 @@ logger.setLevel(logging.INFO)
 
 DB_SECRET_NAME = "proptech/rds/credentials"
 
-MIGRATION_SQL = """
-CREATE TABLE IF NOT EXISTS listings (
-    listing_id          TEXT PRIMARY KEY,
-    city                TEXT NOT NULL,
-    state               TEXT NOT NULL,
-    address             TEXT NOT NULL,
-    price               INTEGER NOT NULL,
-    bedrooms            SMALLINT,
-    bathrooms           NUMERIC(3, 1),
-    sqft                INTEGER,
-    year_built          SMALLINT,
-    description         TEXT,
-    latitude            NUMERIC(10, 7),
-    longitude           NUMERIC(10, 7),
-    distress_score      NUMERIC(3, 2),
-    distress_keywords   TEXT[],
-    discount_percent    NUMERIC(5, 2),
-    estimated_rent      INTEGER,
-    cap_rate            NUMERIC(5, 2),
-    final_score         NUMERIC(5, 2),
-    ingested_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_listings_city    ON listings(city);
-CREATE INDEX IF NOT EXISTS idx_listings_score   ON listings(final_score DESC);
-"""
+MIGRATION_SQL = pathlib.Path(__file__).parent.joinpath(
+    "../../sql/migrations/001_initial.sql"
+).read_text()
+
+# Run only on first invocation per warm container
+_MIGRATED = False
+
+
+def ensure_schema(cur):
+    global _MIGRATED
+    if not _MIGRATED:
+        cur.execute(MIGRATION_SQL)
+        _MIGRATED = True
 
 
 def build_upsert_sql() -> str:
@@ -98,7 +86,7 @@ def lambda_handler(event, context):
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(MIGRATION_SQL)
+            ensure_schema(cur)
             for rec in records:
                 rec.setdefault("distress_keywords", [])
                 cur.execute(sql, rec)
