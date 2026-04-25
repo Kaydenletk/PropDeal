@@ -1,0 +1,46 @@
+name: lambda-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lambdas/**'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        lambda: [fetch, transform, enrich, load, api]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install and test
+        working-directory: lambdas/${{ matrix.lambda }}
+        run: |
+          pip install -r requirements.txt pytest
+          pytest test_handler.py -v
+
+      - name: Package and deploy
+        working-directory: lambdas/${{ matrix.lambda }}
+        run: |
+          mkdir -p package
+          pip install -r requirements.txt -t package/
+          cp handler.py package/
+          cd package && zip -r ../function.zip . && cd ..
+          aws lambda update-function-code \
+            --function-name proptech-${{ matrix.lambda }} \
+            --zip-file fileb://function.zip
