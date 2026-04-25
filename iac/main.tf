@@ -22,6 +22,36 @@ module "sqs" {
   name_prefix = var.project_name
 }
 
+module "transform_lambda" {
+  source        = "./modules/lambda"
+  function_name = "${var.project_name}-transform"
+  source_dir    = "${path.module}/../lambdas/transform"
+  timeout       = 120
+
+  dlq_arn = module.sqs.dlq_arn
+
+  inline_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject"]
+        Resource = "${module.s3.raw_bucket_arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject"]
+        Resource = "${module.s3.clean_bucket_arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["sqs:SendMessage"]
+        Resource = module.sqs.dlq_arn
+      }
+    ]
+  })
+}
+
 module "fetch_lambda" {
   source        = "./modules/lambda"
   function_name = "${var.project_name}-fetch"
