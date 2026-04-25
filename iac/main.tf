@@ -22,6 +22,23 @@ module "sqs" {
   name_prefix = var.project_name
 }
 
+module "step_functions" {
+  source               = "./modules/step-functions"
+  name_prefix          = var.project_name
+  fetch_lambda_arn     = module.fetch_lambda.function_arn
+  transform_lambda_arn = module.transform_lambda.function_arn
+  enrich_lambda_arn    = module.enrich_lambda.function_arn
+  load_lambda_arn      = module.load_lambda.function_arn
+  lambda_arns = [
+    module.fetch_lambda.function_arn,
+    module.transform_lambda.function_arn,
+    module.enrich_lambda.function_arn,
+    module.load_lambda.function_arn,
+  ]
+  raw_bucket   = module.s3.raw_bucket_name
+  clean_bucket = module.s3.clean_bucket_name
+}
+
 module "load_lambda" {
   source        = "./modules/lambda"
   function_name = "${var.project_name}-load"
