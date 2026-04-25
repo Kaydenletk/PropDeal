@@ -38,3 +38,8 @@ variable "dlq_arn" {
   type    = string
   default = null
 }
+
+variable "enable_function_url" {
+  type    = bool
+  default = false
+}

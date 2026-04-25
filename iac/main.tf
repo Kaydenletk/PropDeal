@@ -22,6 +22,30 @@ module "sqs" {
   name_prefix = var.project_name
 }
 
+module "api_lambda" {
+  source        = "./modules/lambda"
+  function_name = "${var.project_name}-api"
+  source_dir    = "${path.module}/../lambdas/api"
+  timeout       = 30
+  memory_size   = 256
+
+  enable_function_url = true
+
+  vpc_config = {
+    subnet_ids         = module.vpc.private_subnet_ids
+    security_group_ids = [module.vpc.lambda_security_group_id]
+  }
+
+  inline_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["secretsmanager:GetSecretValue"]
+      Resource = module.rds.secret_arn
+    }]
+  })
+}
+
 module "eventbridge" {
   source            = "./modules/eventbridge"
   name_prefix       = var.project_name
