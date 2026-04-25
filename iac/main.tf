@@ -16,3 +16,8 @@ module "rds" {
   db_subnet_group_name = module.vpc.db_subnet_group_name
   security_group_id    = module.vpc.rds_security_group_id
 }
+
+module "sqs" {
+  source      = "./modules/sqs"
+  name_prefix = var.project_name
+}
