@@ -6,6 +6,9 @@ for L in fetch transform enrich load api; do
   rm -rf .build
   mkdir -p .build
   cp handler.py .build/
+  if [ -d "$ROOT/lambdas/shared" ]; then
+    cp -r "$ROOT/lambdas/shared" .build/
+  fi
   if [ -s requirements.txt ] && grep -v '^#' requirements.txt | grep -q .; then
     # Force Lambda-compatible wheels (Linux x86_64, Python 3.12)
     # Without these flags, macOS/arm64 dev machines pull native wheels that
