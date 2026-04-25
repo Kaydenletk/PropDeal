@@ -22,6 +22,37 @@ module "sqs" {
   name_prefix = var.project_name
 }
 
+module "enrich_lambda" {
+  source        = "./modules/lambda"
+  function_name = "${var.project_name}-enrich"
+  source_dir    = "${path.module}/../lambdas/enrich"
+  timeout       = 300
+  memory_size   = 512
+
+  dlq_arn = module.sqs.dlq_arn
+
+  inline_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:PutObject"]
+        Resource = "${module.s3.clean_bucket_arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = "arn:aws:secretsmanager:${var.region}:*:secret:proptech/openai/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["sqs:SendMessage"]
+        Resource = module.sqs.dlq_arn
+      }
+    ]
+  })
+}
+
 module "transform_lambda" {
   source        = "./modules/lambda"
   function_name = "${var.project_name}-transform"
