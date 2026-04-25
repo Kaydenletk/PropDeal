@@ -15,3 +15,8 @@ variable "project_name" {
   type        = string
   default     = "proptech"
 }
+
+variable "alert_email" {
+  description = "Email for CloudWatch alarm notifications"
+  type        = string
+}

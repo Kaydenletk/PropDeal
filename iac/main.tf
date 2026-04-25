@@ -22,6 +22,22 @@ module "sqs" {
   name_prefix = var.project_name
 }
 
+module "monitoring" {
+  source      = "./modules/monitoring"
+  name_prefix = var.project_name
+  alert_email = var.alert_email
+  region      = var.region
+  lambda_function_names = [
+    module.fetch_lambda.function_name,
+    module.transform_lambda.function_name,
+    module.enrich_lambda.function_name,
+    module.load_lambda.function_name,
+    module.api_lambda.function_name,
+  ]
+  db_identifier     = "${var.project_name}-rds"
+  state_machine_arn = module.step_functions.state_machine_arn
+}
+
 module "api_lambda" {
   source        = "./modules/lambda"
   function_name = "${var.project_name}-api"
