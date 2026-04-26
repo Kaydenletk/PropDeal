@@ -33,3 +33,13 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Coverage + venv + caches
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+*.pyc
