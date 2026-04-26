@@ -1,64 +1,44 @@
 import json
-import logging
-from contextlib import contextmanager
+import os
+from shared.db import get_pool
+from shared.log import log
+from shared.secrets import get_secret
 
-import boto3
-import psycopg
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+DB_SECRET = os.environ["DB_SECRET_NAME"]
 
 
-def parse_limit(event: dict) -> int:
+def _ensure_pool_inited():
+    if "DATABASE_URL" not in os.environ:
+        creds = get_secret(DB_SECRET)
+        os.environ["DATABASE_URL"] = (
+            f"postgresql://{creds['username']}:{creds['password']}"
+            f"@{creds['host']}:{creds['port']}/{creds['dbname']}"
+        )
+
+
+def handler(event, _ctx):
+    _ensure_pool_inited()
     qs = event.get("queryStringParameters") or {}
     try:
-        limit = int(qs.get("limit", 10))
-    except (ValueError, TypeError):
+        limit = max(1, min(100, int(qs.get("limit", 10))))
+    except ValueError:
         limit = 10
-    return min(max(limit, 1), 100)
 
-
-def get_db_creds() -> dict:
-    secrets = boto3.client("secretsmanager")
-    secret = secrets.get_secret_value(SecretId="proptech/rds/credentials")
-    return json.loads(secret["SecretString"])
-
-
-@contextmanager
-def get_db_connection():
-    creds = get_db_creds()
-    conn = psycopg.connect(
-        host=creds["host"],
-        port=creds["port"],
-        dbname=creds["dbname"],
-        user=creds["username"],
-        password=creds["password"],
-    )
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-
-def lambda_handler(event, context):
-    limit = parse_limit(event)
-
-    sql = """
-        SELECT listing_id, city, state, address, price, distress_score
-        FROM listings
-        WHERE distress_score IS NOT NULL
-        ORDER BY distress_score DESC NULLS LAST, price ASC
-        LIMIT %s
-    """
-
-    with get_db_connection() as conn:
+    pool = get_pool()
+    with pool.connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, (limit,))
-            cols = [d[0] for d in cur.description]
+            cur.execute(
+                "SELECT listing_id, address, city, state, zip, price, distress_score "
+                "FROM listings WHERE distress_score IS NOT NULL "
+                "ORDER BY distress_score DESC NULLS LAST LIMIT %s",
+                (limit,),
+            )
+            cols = [d.name for d in cur.description]
             rows = [dict(zip(cols, r)) for r in cur.fetchall()]
 
+    log("info", "api hit", count=len(rows), caller=event.get("requestContext", {}).get("identity", {}).get("userArn"))
     return {
         "statusCode": 200,
         "headers": {"Content-Type": "application/json"},
-        "body": json.dumps({"deals": rows}, default=str),
+        "body": json.dumps(rows, default=str),
     }
