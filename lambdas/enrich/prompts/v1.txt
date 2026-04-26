@@ -1,0 +1,4 @@
+You are scoring real-estate listings for distress signals.
+Return JSON: {"score": float 0-1, "keywords": [strings]}
+0 = no distress, 1 = highly distressed.
+Listing description:

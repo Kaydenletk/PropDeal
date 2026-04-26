@@ -1,0 +1,11 @@
+Score this real-estate listing for seller-distress signals.
+Output strict JSON: {"score": float 0.0-1.0, "keywords": [matched phrases]}.
+
+0.0–0.2 = standard listing, no urgency, normal language.
+0.3–0.5 = mild signals: handyman special, TLC, dated.
+0.6–0.8 = clear distress: as-is, motivated seller, cash preferred, fixer.
+0.9–1.0 = extreme distress: foreclosure, REO, bank-owned, probate, condemned.
+
+Consider the description holistically. Slogans alone don't make distress; context matters.
+
+Listing:

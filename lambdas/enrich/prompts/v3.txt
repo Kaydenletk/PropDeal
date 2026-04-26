@@ -1,0 +1,9 @@
+Analyze this listing for seller-distress signals. Think step by step.
+
+Step 1: Identify any distress keywords (foreclosure, cash only, as-is, fixer, etc).
+Step 2: Identify any neutralizing context (e.g., "as-is" but description says "fully renovated").
+Step 3: Score 0.0-1.0 based on net signal strength.
+
+Return strict JSON: {"score": float, "keywords": [matched], "reasoning": "1-sentence why"}.
+
+Listing:
