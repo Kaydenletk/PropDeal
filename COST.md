@@ -1,42 +1,47 @@
 # Cost Breakdown
 
-Target: Under $25/month all-in (AWS + OpenAI).
+## Free-tier baseline (first 12 months, US-East-1)
 
-## Monthly Estimate
+| Service | Free tier | This pipeline |
+|---------|-----------|---------------|
+| Lambda  | 1M req/mo forever | ~150 req/mo (5 lambdas × 30 days) |
+| Step Functions Standard | 4k transitions/mo forever | ~150 transitions/mo |
+| S3 Standard | 5GB + 2k PUT/mo for 12 mo | <1GB, ~90 PUT/mo |
+| RDS t4g.micro | 750 hr/mo for 12 mo | 730 hr/mo |
+| CloudWatch Logs | 5GB/mo forever | ~0.5–2 GB/mo |
+| SQS / SNS | 1M req/mo forever | trivial |
 
-| Service | Config | $/mo |
-|---------|--------|------|
-| AWS Lambda | 5 functions, ~3,000 invocations/month | $0.50 |
-| AWS S3 | 10GB storage, lifecycle 30d on raw | $0.30 |
-| AWS RDS | db.t4g.micro, 20GB gp3, 1-day backup | $13.00 |
-| AWS EventBridge Scheduler | 30 triggers/month | $0.00 (free tier) |
-| AWS Step Functions | ~90 state transitions/month | $0.05 |
-| AWS SQS | DLQ, minimal messages | $0.00 (free tier) |
-| AWS CloudWatch Logs | 14-day retention, ~1GB/month | $0.60 |
-| AWS CloudWatch Metrics + Alarms | 7 alarms | $0.70 |
-| AWS Secrets Manager | 3 secrets | $1.20 |
-| AWS X-Ray | Active tracing | $0.10 |
-| AWS Data Transfer | Minimal (no cross-AZ) | $0.00 |
-| **AWS Subtotal** | | **~$16.45** |
-| OpenAI GPT-4o-mini | ~100K tokens/day @ $0.00015/1K input | $3.00 |
-| RentCast API | Free tier (50 requests/day) | $0.00 |
-| **Total** | | **~$19.45** |
+## Real ongoing line items (NOT free)
 
-## Cost-Saving Choices
+| Item | Monthly cost | Why |
+|------|-------------|-----|
+| Secrets Manager (3 secrets) | $1.20 | Not in free tier ($0.40/secret) |
+| CloudWatch alarm metrics (~6 alarms) | $0.60 | $0.10/alarm/mo |
+| CloudWatch dashboard | $3.00 | $3/dashboard after first 3 |
+| NAT instance t4g.nano (free tier) | $0.00 | Free under t4g 750hr |
+| Data transfer | <$0.50 | Inbound free, outbound minimal |
 
-1. **No NAT Gateway** — saves $32/mo. fetch/transform/enrich Lambdas run outside VPC; only load + api touch RDS.
-2. **db.t4g.micro** — ARM-based Graviton; 20% cheaper than x86 equivalents for equal workload.
-3. **S3 lifecycle on raw bucket** — delete files after 30 days, keep clean for analysis.
-4. **Lambda memory 256MB default** — only bump for enrich (512MB) and load (512MB).
-5. **CloudWatch Logs retention 14 days** — balances debuggability with cost.
-6. **EventBridge Scheduler** instead of always-on Airflow/EC2.
-7. **GPT-4o-mini** over GPT-4o — 20x cheaper, sufficient for keyword-style classification.
+**Total during free tier (months 1-12): ~$3-5/mo**
 
-## Cost Alarms
+## Post-12-month run rate
 
-SNS alarm fires when monthly AWS bill exceeds $50 (set via `scripts/bootstrap.sh`).
+| Item | Monthly cost |
+|------|-------------|
+| RDS t4g.micro | $12.50 |
+| All free-tier-expired storage | ~$1 |
+| Secrets + alarms + dashboard | ~$5 |
+| **Total** | **~$18-20/mo** |
 
-## Gotchas Observed
+Mitigation post-12-mo: migrate to Aurora Serverless v2 (auto-pause at 0 ACU = $0 idle) OR Neon free tier OR shut down RDS and replay from S3 archive on demand.
 
-- First apply: RDS snapshot on destroy cost $1 until manually deleted.
-- Initial Step Functions runs had retries that spiked invocations — fixed by adding idempotency check in fetch Lambda.
+## One-time costs
+
+| Item | Cost |
+|------|------|
+| OpenAI prepaid credit | $5 (lasts ~6 months) |
+| RentCast | $0 (free tier 50 calls/day) |
+
+## Honest summary
+
+- **First 12 months:** $3-5/month + $5 one-time OpenAI = ~$45 total year 1
+- **Year 2+:** ~$18-20/month unless migrated off RDS
