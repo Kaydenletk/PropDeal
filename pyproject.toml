@@ -1,0 +1,31 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["lambdas"]
+python_files = ["test_*.py"]
+addopts = "--strict-markers --tb=short -ra"
+markers = [
+    "integration: requires LocalStack",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["lambdas"]
+omit = ["lambdas/*/test_*.py", "tests/*"]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "S", "T20"]
+ignore = ["E501", "S101", "S105", "S106"]
