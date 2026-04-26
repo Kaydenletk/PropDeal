@@ -48,6 +48,10 @@ def handler(_event, _ctx):
         log("error", "rentcast fetch failed", status=e.response.status_code)
         listings = []
         raw_key = f"raw/{today}_partial.json"
+    except requests.RequestException as e:
+        log("error", "rentcast fetch failed", error=str(e))
+        listings = []
+        raw_key = f"raw/{today}_partial.json"
 
     S3.put_object(Bucket=RAW_BUCKET, Key=raw_key, Body=json.dumps(listings).encode())
     log("info", "fetched", count=len(listings), key=raw_key)
