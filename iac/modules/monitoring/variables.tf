@@ -4,3 +4,7 @@ variable "lambda_function_names" { type = list(string) }
 variable "db_identifier" { type = string }
 variable "state_machine_arn" { type = string }
 variable "region" { type = string }
+variable "sns_topic_arn" {
+  type        = string
+  description = "Pre-existing SNS topic to publish alarms to"
+}

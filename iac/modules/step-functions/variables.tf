@@ -6,3 +6,7 @@ variable "load_lambda_arn" { type = string }
 variable "lambda_arns" { type = list(string) }
 variable "raw_bucket" { type = string }
 variable "clean_bucket" { type = string }
+variable "sns_topic_arn" {
+  type        = string
+  description = "SNS topic ARN for pipeline failure notifications"
+}

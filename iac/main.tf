@@ -1,5 +1,12 @@
 # Root composition — modules added in subsequent tasks
 
+# Shared SNS topic for both pipeline failure notifications and CloudWatch alarms.
+# Defined here (not inside a module) to break the cycle between monitoring (needs
+# state_machine_arn) and step-functions (needs sns_topic_arn).
+resource "aws_sns_topic" "alerts" {
+  name = "${var.project_name}-alerts"
+}
+
 module "vpc" {
   source      = "./modules/vpc"
   name_prefix = var.project_name
@@ -36,6 +43,7 @@ module "monitoring" {
   ]
   db_identifier     = "${var.project_name}-rds"
   state_machine_arn = module.step_functions.state_machine_arn
+  sns_topic_arn     = aws_sns_topic.alerts.arn
 }
 
 module "api_lambda" {
@@ -81,8 +89,9 @@ module "step_functions" {
     module.enrich_lambda.function_arn,
     module.load_lambda.function_arn,
   ]
-  raw_bucket   = module.s3.raw_bucket_name
-  clean_bucket = module.s3.clean_bucket_name
+  raw_bucket    = module.s3.raw_bucket_name
+  clean_bucket  = module.s3.clean_bucket_name
+  sns_topic_arn = aws_sns_topic.alerts.arn
 }
 
 module "load_lambda" {
@@ -190,8 +199,8 @@ module "fetch_lambda" {
   memory_size   = 256
 
   environment_variables = {
-    RAW_BUCKET             = module.s3.raw_bucket_name
-    MAX_LISTINGS_PER_RUN   = "30"
+    RAW_BUCKET           = module.s3.raw_bucket_name
+    MAX_LISTINGS_PER_RUN = "30"
   }
 
   dlq_arn = module.sqs.dlq_arn

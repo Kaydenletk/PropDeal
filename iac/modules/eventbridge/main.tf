@@ -30,7 +30,7 @@ resource "aws_scheduler_schedule" "nightly" {
     mode = "OFF"
   }
 
-  schedule_expression = "cron(0 2 * * ? *)"
+  schedule_expression          = "cron(0 2 * * ? *)"
   schedule_expression_timezone = "UTC"
 
   target {

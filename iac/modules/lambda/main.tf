@@ -10,8 +10,8 @@ resource "aws_iam_role" "lambda" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
       Principal = { Service = "lambda.amazonaws.com" }
     }]
   })
@@ -40,7 +40,7 @@ resource "aws_lambda_function" "main" {
   filename         = data.archive_file.lambda_zip.output_path
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
   role             = aws_iam_role.lambda.arn
-  handler          = "handler.lambda_handler"
+  handler          = "handler.handler"
   runtime          = "python3.12"
   timeout          = var.timeout
   memory_size      = var.memory_size
@@ -77,7 +77,7 @@ resource "aws_cloudwatch_log_group" "lambda" {
 resource "aws_lambda_function_url" "this" {
   count              = var.enable_function_url ? 1 : 0
   function_name      = aws_lambda_function.main.function_name
-  authorization_type = "NONE"
+  authorization_type = "AWS_IAM"
 
   cors {
     allow_origins = ["*"]

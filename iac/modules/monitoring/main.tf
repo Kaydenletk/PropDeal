@@ -1,9 +1,5 @@
-resource "aws_sns_topic" "alerts" {
-  name = "${var.name_prefix}-alerts"
-}
-
 resource "aws_sns_topic_subscription" "email" {
-  topic_arn = aws_sns_topic.alerts.arn
+  topic_arn = var.sns_topic_arn
   protocol  = "email"
   endpoint  = var.alert_email
 }
@@ -14,9 +10,9 @@ resource "aws_cloudwatch_dashboard" "main" {
   dashboard_body = jsonencode({
     widgets = [
       {
-        type       = "metric"
+        type = "metric"
         properties = {
-          title   = "Lambda Invocations"
+          title = "Lambda Invocations"
           metrics = [
             for name in var.lambda_function_names :
             ["AWS/Lambda", "Invocations", "FunctionName", name]
@@ -27,9 +23,9 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type       = "metric"
+        type = "metric"
         properties = {
-          title   = "Lambda Errors"
+          title = "Lambda Errors"
           metrics = [
             for name in var.lambda_function_names :
             ["AWS/Lambda", "Errors", "FunctionName", name]
@@ -40,7 +36,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type       = "metric"
+        type = "metric"
         properties = {
           title   = "RDS CPU"
           metrics = [["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.db_identifier]]
@@ -50,9 +46,9 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type       = "metric"
+        type = "metric"
         properties = {
-          title   = "Step Functions Executions"
+          title = "Step Functions Executions"
           metrics = [
             ["AWS/States", "ExecutionsSucceeded", "StateMachineArn", var.state_machine_arn],
             ["AWS/States", "ExecutionsFailed", "StateMachineArn", var.state_machine_arn],
@@ -79,7 +75,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   dimensions = {
     FunctionName = each.key
   }
-  alarm_actions = [aws_sns_topic.alerts.arn]
+  alarm_actions = [var.sns_topic_arn]
 }
 
 resource "aws_cloudwatch_metric_alarm" "sfn_failures" {
@@ -94,5 +90,5 @@ resource "aws_cloudwatch_metric_alarm" "sfn_failures" {
   dimensions = {
     StateMachineArn = var.state_machine_arn
   }
-  alarm_actions = [aws_sns_topic.alerts.arn]
+  alarm_actions = [var.sns_topic_arn]
 }
