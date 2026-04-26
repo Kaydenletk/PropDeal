@@ -9,3 +9,7 @@ output "secret_arn" {
 output "secret_name" {
   value = aws_secretsmanager_secret.db.name
 }
+
+output "db_instance_id" {
+  value = aws_db_instance.main.id
+}

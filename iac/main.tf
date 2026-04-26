@@ -191,6 +191,21 @@ module "transform_lambda" {
   })
 }
 
+module "observability" {
+  source = "./modules/observability"
+  lambda_names = [
+    module.fetch_lambda.function_name,
+    module.transform_lambda.function_name,
+    module.enrich_lambda.function_name,
+    module.load_lambda.function_name,
+    module.api_lambda.function_name,
+  ]
+  state_machine_arn = module.step_functions.state_machine_arn
+  rds_id            = module.rds.db_instance_id
+  dlq_name          = module.sqs.dlq_name
+  sns_topic_arn     = aws_sns_topic.alerts.arn
+}
+
 module "fetch_lambda" {
   source        = "./modules/lambda"
   function_name = "${var.project_name}-fetch"
