@@ -1,84 +1,81 @@
 import json
-import logging
 import os
-
+import time
 import boto3
-from openai import OpenAI
+from openai import OpenAI, RateLimitError, APIError
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+from shared.log import log
+from shared.secrets import get_secret
 
-PROMPT = """You are a real estate distress signal detector.
-Given a listing description, score 0.0–1.0 how likely the seller is MOTIVATED or DISTRESSED.
-Distress signals: "motivated seller", "as-is", "fixer-upper", "TLC", "short sale",
-"estate sale", "probate", "must sell", "cash only", "below market", "needs work".
+S3 = boto3.client("s3")
+CLEAN_BUCKET = os.environ["CLEAN_BUCKET"]
+SECRET_NAME = os.environ["OPENAI_SECRET_NAME"]
+MAX_RETRIES = 3
+BACKOFF_SECONDS = 2
 
-Return ONLY valid JSON: {"score": <float>, "keywords": [<matched strings>]}
+# Module-scoped client (one per warm container)
+_CLIENT: OpenAI | None = None
 
-Description:
+
+def _client() -> OpenAI:
+    global _CLIENT
+    if _CLIENT is None:
+        api_key = get_secret(SECRET_NAME)["OPENAI_API_KEY"]
+        _CLIENT = OpenAI(api_key=api_key)
+    return _CLIENT
+
+
+PROMPT_VERSION = "v3"
+PROMPT = """You are scoring real-estate listings for distress signals.
+Return JSON: {"score": float 0-1, "keywords": [strings]}
+0 = no distress, 1 = highly distressed (foreclosure / motivated / as-is / fixer / probate / cash only).
+Listing description:
 """
 
 
-def get_openai_key() -> str:
-    secrets = boto3.client("secretsmanager")
-    secret = secrets.get_secret_value(SecretId="proptech/openai/api-key")
-    return json.loads(secret["SecretString"])["api_key"]
+def score_one(description: str) -> tuple[float | None, list[str]]:
+    for attempt in range(MAX_RETRIES):
+        try:
+            resp = _client().chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": PROMPT + description}],
+                temperature=0,
+                response_format={"type": "json_object"},
+            )
+            payload = json.loads(resp.choices[0].message.content)
+            return float(payload["score"]), list(payload.get("keywords", []))
+        except RateLimitError:
+            if attempt == MAX_RETRIES - 1:
+                log("warning", "openai rate limit exhausted, score=NULL")
+                return None, []
+            time.sleep(BACKOFF_SECONDS * (2 ** attempt))
+        except (APIError, json.JSONDecodeError, KeyError, ValueError) as e:
+            log("error", "openai score failed", error=str(e))
+            return None, []
+    return None, []
 
 
-def call_openai(description: str, api_key: str) -> str:
-    client = OpenAI(api_key=api_key)
-    resp = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": PROMPT + description}],
-        temperature=0,
-        max_tokens=150,
-    )
-    return resp.choices[0].message.content
+def handler(event, _ctx):
+    key = event["clean_key"]
+    enriched_key = key.replace("/clean/", "/enriched/")
 
-
-def score_distress(description: str, api_key: str = "") -> dict:
-    if not description:
-        return {"score": 0.0, "keywords": []}
+    # Idempotency: skip if already enriched
     try:
-        raw = call_openai(description, api_key)
-        parsed = json.loads(raw)
-        return {
-            "score": float(parsed.get("score", 0.0)),
-            "keywords": parsed.get("keywords", []),
-        }
-    except (json.JSONDecodeError, ValueError, KeyError) as e:
-        logger.warning(f"Malformed OpenAI response: {e}")
-        return {"score": 0.0, "keywords": []}
+        S3.head_object(Bucket=CLEAN_BUCKET, Key=enriched_key)
+        log("info", "skip enrich, already exists", key=enriched_key)
+        return {"enriched_key": enriched_key, "skipped": True}
+    except S3.exceptions.ClientError:
+        pass
 
+    obj = S3.get_object(Bucket=CLEAN_BUCKET, Key=key)
+    listings = json.loads(obj["Body"].read())
 
-def lambda_handler(event, context):
-    clean_bucket = event["clean_bucket"]
-    clean_key = event["clean_key"]
+    for rec in listings:
+        score, keywords = score_one(rec.get("description", "") or "")
+        rec["distress_score"] = score  # may be None on failure -> SQL NULL downstream
+        rec["distress_keywords"] = keywords
+        rec["prompt_version"] = PROMPT_VERSION
 
-    s3 = boto3.client("s3")
-    obj = s3.get_object(Bucket=clean_bucket, Key=clean_key)
-    records = json.loads(obj["Body"].read())
-
-    api_key = get_openai_key()
-
-    enriched = []
-    for rec in records:
-        distress = score_distress(rec.get("description", ""), api_key)
-        rec["distress_score"] = distress["score"]
-        rec["distress_keywords"] = distress["keywords"]
-        enriched.append(rec)
-
-    enriched_key = clean_key.replace("clean-listings/", "enriched-listings/")
-    s3.put_object(
-        Bucket=clean_bucket,
-        Key=enriched_key,
-        Body=json.dumps(enriched).encode("utf-8"),
-        ContentType="application/json",
-    )
-
-    return {
-        "statusCode": 200,
-        "enriched": len(enriched),
-        "clean_bucket": clean_bucket,
-        "enriched_key": enriched_key,
-    }
+    S3.put_object(Bucket=CLEAN_BUCKET, Key=enriched_key, Body=json.dumps(listings).encode())
+    log("info", "enriched", count=len(listings), key=enriched_key)
+    return {"enriched_key": enriched_key, "count": len(listings), "skipped": False}
