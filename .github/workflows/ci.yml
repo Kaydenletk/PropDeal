@@ -1,0 +1,46 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: pytest --cov --cov-report=xml --cov-report=term -m "not integration"
+      - uses: codecov/codecov-action@v4
+        with:
+          file: coverage.xml
+          fail_ci_if_error: false
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+      - uses: terraform-linters/setup-tflint@v4
+      - run: terraform -chdir=iac fmt -check -recursive
+      - run: terraform -chdir=iac init -backend=false -upgrade
+      - run: terraform -chdir=iac validate
+      - run: tflint --chdir=iac --recursive
+
+  asl-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sed -e 's/\${[a-z_]*_arn}/arn:aws:lambda:us-east-1:000000000000:function:placeholder/g' \
+              -e 's/\${[a-z_]*_bucket}/proptech-test/g' \
+              iac/asl/pipeline.json > /tmp/asl.json
+          python -c "import json; json.load(open('/tmp/asl.json'))"
