@@ -1,0 +1,8 @@
+services:
+  localstack:
+    image: localstack/localstack:3.8
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,sqs,sns,secretsmanager,stepfunctions,lambda,iam,cloudwatch,logs
+      - DEBUG=0
