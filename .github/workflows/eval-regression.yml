@@ -1,0 +1,45 @@
+name: Eval Regression
+on:
+  schedule:
+    - cron: "0 6 * * *"  # daily 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements-dev.txt
+      - name: Skip if no labeled data
+        id: check
+        run: |
+          if [ ! -s tests/fixtures/distress_eval.jsonl ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "No labeled data yet — skipping eval regression."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Run eval
+        if: steps.check.outputs.skip == 'false'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python scripts/eval_distress_score.py \
+            --prompt v3 --model gpt-4o-mini --split holdout \
+            > eval_result.txt
+          cat eval_result.txt
+      - name: Check F1 threshold
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          F1=$(grep "| F1" eval_result.txt | head -1 | awk '{print $4}')
+          THRESHOLD=0.70
+          python -c "
+          import sys
+          f1 = float('$F1')
+          if f1 < $THRESHOLD:
+              print(f'F1 regression: {f1} < $THRESHOLD')
+              sys.exit(1)
+          print(f'F1 OK: {f1}')
+          "
