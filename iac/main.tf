@@ -190,7 +190,8 @@ module "fetch_lambda" {
   memory_size   = 256
 
   environment_variables = {
-    RAW_BUCKET = module.s3.raw_bucket_name
+    RAW_BUCKET             = module.s3.raw_bucket_name
+    MAX_LISTINGS_PER_RUN   = "30"
   }
 
   dlq_arn = module.sqs.dlq_arn
