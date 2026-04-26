@@ -57,7 +57,7 @@ def score_one(description: str) -> tuple[float | None, list[str]]:
 
 def handler(event, _ctx):
     key = event["clean_key"]
-    enriched_key = key.replace("/clean/", "/enriched/")
+    enriched_key = key.replace("clean/", "enriched/", 1)
 
     # Idempotency: skip if already enriched
     try:
