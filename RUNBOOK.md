@@ -91,3 +91,28 @@ terraform apply    # recreate
 ```
 
 Migration SQL is embedded in load Lambda — runs on first invocation.
+
+## CloudWatch Logs Insights — Common Queries
+
+### Find Lambda failures last 24h
+```
+fields @timestamp, lambda, msg, error
+| filter level = "error"
+| sort @timestamp desc
+| limit 50
+```
+
+### p95 duration of enrich Lambda last 7 days
+```
+fields @duration
+| filter @log like /enrich/
+| stats avg(@duration), pct(@duration, 95) by bin(1h)
+```
+
+### Top error messages by frequency
+```
+fields msg, error
+| filter level = "error"
+| stats count() as n by msg
+| sort n desc
+```
