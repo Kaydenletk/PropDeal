@@ -17,7 +17,7 @@ If all 4 pass, Phase 1B is closed. Proceed.
 
 ## Picking the archetype
 
-Side-project should CONTRAST ProptechAI to demonstrate range. Three options:
+Side-project should CONTRAST PropDeal to demonstrate range. Three options:
 
 ### Option A: Agentic LLM workflow (most relevant to 2026 hiring)
 - 1-page React app calling Claude with tool use
@@ -69,7 +69,7 @@ gh repo edit --description "[1-line pitch]"
 
 ## Anti-goals (what NOT to build as side-project)
 
-- Another data pipeline (same archetype as ProptechAI)
+- Another data pipeline (same archetype as PropDeal)
 - Another AWS Lambda app (same stack)
 - Anything taking > 4 weeks (delays job applications)
 - A "platform" or marketplace (too ambitious for 2-week scope)
@@ -79,12 +79,12 @@ gh repo edit --description "[1-line pitch]"
 By the time Phase 1C closes, side-project should have:
 - [ ] Public GitHub repo with README + 1 screenshot/GIF
 - [ ] Live demo URL (Vercel/Render/Fly.io free tier)
-- [ ] One distinct keyword for resume that ProptechAI doesn't cover (e.g. "agentic", "websocket", "CLI", "RAG")
+- [ ] One distinct keyword for resume that PropDeal doesn't cover (e.g. "agentic", "websocket", "CLI", "RAG")
 - [ ] LinkedIn post linking both projects together as a portfolio narrative
 
 ## Resume integration
 
 After both projects ship:
-> "Two contrasting production projects: ProptechAI (serverless AWS data pipeline + LLM eval) and [Side-Project] (agentic LLM / realtime / devtools). Demonstrates range across [stack/domain]."
+> "Two contrasting production projects: PropDeal (serverless AWS data pipeline + LLM eval) and [Side-Project] (agentic LLM / realtime / devtools). Demonstrates range across [stack/domain]."
 
 This narrative beats one polished project for junior portfolios.

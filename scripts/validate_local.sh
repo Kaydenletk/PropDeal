@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Local validation gate for ProptechAI Phase 1A.0.
+# Local validation gate for PropDeal Phase 1A.0.
 # Run before any `terraform apply`.
 #
 # Prerequisites:
@@ -51,8 +51,8 @@ if command -v aws >/dev/null 2>&1; then
       -e 's/${enrich_arn}/arn:aws:lambda:us-east-1:000000000000:function:enrich/g' \
       -e 's/${load_arn}/arn:aws:lambda:us-east-1:000000000000:function:load/g' \
       -e 's/${sns_topic_arn}/arn:aws:sns:us-east-1:000000000000:alerts/g' \
-      -e 's/${raw_bucket}/proptech-raw/g' \
-      -e 's/${clean_bucket}/proptech-clean/g' \
+      -e 's/${raw_bucket}/propdeal-raw/g' \
+      -e 's/${clean_bucket}/propdeal-clean/g' \
       iac/asl/pipeline.json > "$TMP"
   aws stepfunctions validate-state-machine-definition \
     --definition file://"$TMP" \

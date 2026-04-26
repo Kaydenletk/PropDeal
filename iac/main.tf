@@ -150,7 +150,7 @@ module "enrich_lambda" {
       {
         Effect   = "Allow"
         Action   = ["secretsmanager:GetSecretValue"]
-        Resource = "arn:aws:secretsmanager:${var.region}:*:secret:proptech/openai/*"
+        Resource = "arn:aws:secretsmanager:${var.region}:*:secret:propdeal/openai/*"
       },
       {
         Effect   = "Allow"
@@ -231,7 +231,7 @@ module "fetch_lambda" {
       {
         Effect   = "Allow"
         Action   = ["secretsmanager:GetSecretValue"]
-        Resource = "arn:aws:secretsmanager:${var.region}:*:secret:proptech/rentcast/*"
+        Resource = "arn:aws:secretsmanager:${var.region}:*:secret:propdeal/rentcast/*"
       },
       {
         Effect   = "Allow"

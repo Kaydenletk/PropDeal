@@ -13,7 +13,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "proptech-pipeline"
+      Project     = "propdeal-pipeline"
       ManagedBy   = "terraform"
       Environment = var.environment
     }

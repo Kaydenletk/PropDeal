@@ -1,5 +1,5 @@
 resource "aws_cloudwatch_dashboard" "main" {
-  dashboard_name = "proptech-pipeline-slo"
+  dashboard_name = "propdeal-pipeline-slo"
   dashboard_body = jsonencode({
     widgets = [
       {
@@ -73,7 +73,7 @@ resource "aws_cloudwatch_dashboard" "main" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "pipeline_slo_breach" {
-  alarm_name          = "proptech-pipeline-slo-breach"
+  alarm_name          = "propdeal-pipeline-slo-breach"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 1
   metric_name         = "ExecutionsSucceeded"

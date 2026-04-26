@@ -14,9 +14,9 @@ REGION="us-east-1"  # AWS/Billing metrics only publish to us-east-1
 
 echo "==> Creating billing alarm (threshold \$50) in $REGION"
 
-aws sns create-topic --name proptech-billing-alerts --region "$REGION" >/dev/null
+aws sns create-topic --name propdeal-billing-alerts --region "$REGION" >/dev/null
 TOPIC_ARN=$(aws sns list-topics --region "$REGION" \
-  --query "Topics[?contains(TopicArn,'proptech-billing-alerts')].TopicArn" \
+  --query "Topics[?contains(TopicArn,'propdeal-billing-alerts')].TopicArn" \
   --output text)
 
 aws sns subscribe \
@@ -26,7 +26,7 @@ aws sns subscribe \
   --region "$REGION" >/dev/null
 
 aws cloudwatch put-metric-alarm \
-  --alarm-name proptech-billing-50-usd \
+  --alarm-name propdeal-billing-50-usd \
   --alarm-description "Alert when AWS bill exceeds \$50" \
   --metric-name EstimatedCharges \
   --namespace AWS/Billing \

@@ -1,8 +1,8 @@
-# Interview Prep — ProptechAI
+# Interview Prep — PropDeal
 
 ## 2-minute pitch
 
-ProptechAI is a serverless AWS pipeline I built solo to score real-estate listings for distress signals. Nightly cron triggers Step Functions, which orchestrates 5 Lambdas — fetch from RentCast, transform with PII redaction, enrich with GPT-4o-mini scoring, load to RDS Postgres, and serve via IAM-signed Function URL. The differentiator isn't the pipeline (that's table stakes), it's the eval harness: N=120 hand-labeled listings with 30% sealed holdout, Cohen's κ inter-rater on a 20-item subset, bootstrap confidence intervals, and a regex baseline. F1 on holdout is [v] with 95% CI [lo, hi], beating the regex baseline by +[Δ]. The whole stack runs on AWS Free Tier for ~$5/mo. I open-sourced the eval harness + dataset on Hugging Face.
+PropDeal is a serverless AWS pipeline I built solo to score real-estate listings for distress signals. Nightly cron triggers Step Functions, which orchestrates 5 Lambdas — fetch from RentCast, transform with PII redaction, enrich with GPT-4o-mini scoring, load to RDS Postgres, and serve via IAM-signed Function URL. The differentiator isn't the pipeline (that's table stakes), it's the eval harness: N=120 hand-labeled listings with 30% sealed holdout, Cohen's κ inter-rater on a 20-item subset, bootstrap confidence intervals, and a regex baseline. F1 on holdout is [v] with 95% CI [lo, hi], beating the regex baseline by +[Δ]. The whole stack runs on AWS Free Tier for ~$5/mo. I open-sourced the eval harness + dataset on Hugging Face.
 
 ## "Why this design?" answers
 

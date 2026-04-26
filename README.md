@@ -1,7 +1,7 @@
 # PROPTECH AI Cloud Pipeline
 
-[![CI](https://github.com/USER/ProptechAI/actions/workflows/ci.yml/badge.svg)](https://github.com/USER/ProptechAI/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/USER/ProptechAI/branch/main/graph/badge.svg)](https://codecov.io/gh/USER/ProptechAI)
+[![CI](https://github.com/Kaydenletk/PropDeal/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaydenletk/PropDeal/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Kaydenletk/PropDeal/branch/main/graph/badge.svg)](https://codecov.io/gh/Kaydenletk/PropDeal)
 
 > Serverless AWS data pipeline for real estate listings — Terraform provisioned, GitHub Actions CI/CD, CloudWatch monitored, under $20/month.
 

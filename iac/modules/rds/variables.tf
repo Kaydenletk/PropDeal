@@ -12,10 +12,10 @@ variable "security_group_id" {
 
 variable "db_name" {
   type    = string
-  default = "proptech"
+  default = "propdeal"
 }
 
 variable "db_username" {
   type    = string
-  default = "proptech_admin"
+  default = "propdeal_admin"
 }

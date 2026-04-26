@@ -10,8 +10,8 @@ set -euo pipefail
 ALERT_EMAIL="${1:?usage: $0 <alert_email>}"
 REGION="${AWS_REGION:-us-east-1}"
 ACCT=$(aws sts get-caller-identity --query Account --output text)
-BUCKET="proptech-tfstate-${ACCT}"
-TABLE="proptech-tflock"
+BUCKET="propdeal-tfstate-${ACCT}"
+TABLE="propdeal-tflock"
 
 echo "==> Creating state bucket s3://$BUCKET in $REGION"
 if [ "$REGION" = "us-east-1" ]; then
@@ -44,7 +44,7 @@ cat > iac/backend.tf <<EOF
 terraform {
   backend "s3" {
     bucket         = "$BUCKET"
-    key            = "proptech/terraform.tfstate"
+    key            = "propdeal/terraform.tfstate"
     region         = "$REGION"
     dynamodb_table = "$TABLE"
     encrypt        = true
