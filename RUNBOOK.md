@@ -1,5 +1,37 @@
 # Runbook
 
+## Initial Deploy Bootstrap (one-time)
+
+Run from repo root. `bootstrap_state.sh` is idempotent — re-running against
+existing resources is a no-op. `bootstrap.sh` is independent and only sets up
+the billing alarm; run it once.
+
+1. `./scripts/bootstrap_state.sh you@example.com`
+   - Creates S3 state bucket + DynamoDB lock table
+   - Generates `iac/backend.tf` with the real bucket/table names
+2. `cd iac && terraform init -migrate-state`
+3. `./scripts/seed_secrets.sh` (provide RentCast + OpenAI keys via prompts)
+4. `./scripts/package_lambdas.sh`
+5. `terraform plan -var="alert_email=you@example.com"` — review
+6. `terraform apply -var="alert_email=you@example.com"` — apply
+7. `./scripts/bootstrap.sh you@example.com` — billing alarm (one-time, AWS-account-wide)
+
+### Re-deploy
+
+After Bootstrap:
+
+1. `./scripts/package_lambdas.sh` (rebuild zips on every code change)
+2. `cd iac && terraform apply -var="alert_email=you@example.com"`
+
+### Script scopes
+
+| Script                        | Purpose                                                              | Re-run safe?                                  |
+| ----------------------------- | -------------------------------------------------------------------- | --------------------------------------------- |
+| `scripts/bootstrap_state.sh`  | Terraform S3 backend + DynamoDB lock + writes `iac/backend.tf`       | yes                                           |
+| `scripts/bootstrap.sh`        | Account-wide billing alarm via SNS + CloudWatch                      | yes (subscription confirm email may resend)   |
+| `scripts/seed_secrets.sh`     | Push RentCast/OpenAI keys to Secrets Manager                         | yes                                           |
+| `scripts/package_lambdas.sh`  | Build Lambda zips for Terraform to upload                            | yes                                           |
+
 ## Pipeline Failed — Where to Look
 
 1. **Step Functions console** → executions → click failed run → graph shows failing state

@@ -1,43 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REGION="us-east-1"
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-STATE_BUCKET="proptech-tfstate-${ACCOUNT_ID}"
-LOCK_TABLE="proptech-tflock"
+# One-time billing alarm bootstrap.
+# Creates an SNS topic + email subscription + CloudWatch billing alarm
+# that fires when estimated charges exceed $50. Independent of Terraform
+# state (see scripts/bootstrap_state.sh for that) so the alarm is in
+# place even if a later Terraform apply fails.
+#
+# Usage: ./scripts/bootstrap.sh <billing-email>
+
 BILLING_EMAIL="${1:?Usage: bootstrap.sh <your-email>}"
+REGION="us-east-1"  # AWS/Billing metrics only publish to us-east-1
 
-echo "Creating Terraform state bucket: $STATE_BUCKET"
-aws s3api create-bucket \
-  --bucket "$STATE_BUCKET" \
-  --region "$REGION"
+echo "==> Creating billing alarm (threshold \$50) in $REGION"
 
-aws s3api put-bucket-versioning \
-  --bucket "$STATE_BUCKET" \
-  --versioning-configuration Status=Enabled
+aws sns create-topic --name proptech-billing-alerts --region "$REGION" >/dev/null
+TOPIC_ARN=$(aws sns list-topics --region "$REGION" \
+  --query "Topics[?contains(TopicArn,'proptech-billing-alerts')].TopicArn" \
+  --output text)
 
-aws s3api put-bucket-encryption \
-  --bucket "$STATE_BUCKET" \
-  --server-side-encryption-configuration \
-  '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
-
-aws s3api put-public-access-block \
-  --bucket "$STATE_BUCKET" \
-  --public-access-block-configuration \
-  "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
-
-echo "Creating DynamoDB lock table: $LOCK_TABLE"
-aws dynamodb create-table \
-  --table-name "$LOCK_TABLE" \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST \
-  --region "$REGION" || echo "Table may already exist"
-
-echo "Creating billing alarm (threshold \$50)"
-aws sns create-topic --name proptech-billing-alerts --region us-east-1
-TOPIC_ARN=$(aws sns list-topics --query "Topics[?contains(TopicArn,'proptech-billing-alerts')].TopicArn" --output text)
-aws sns subscribe --topic-arn "$TOPIC_ARN" --protocol email --notification-endpoint "$BILLING_EMAIL"
+aws sns subscribe \
+  --topic-arn "$TOPIC_ARN" \
+  --protocol email \
+  --notification-endpoint "$BILLING_EMAIL" \
+  --region "$REGION" >/dev/null
 
 aws cloudwatch put-metric-alarm \
   --alarm-name proptech-billing-50-usd \
@@ -51,8 +37,6 @@ aws cloudwatch put-metric-alarm \
   --comparison-operator GreaterThanThreshold \
   --dimensions Name=Currency,Value=USD \
   --alarm-actions "$TOPIC_ARN" \
-  --region us-east-1
+  --region "$REGION"
 
-echo "Bootstrap complete."
-echo "STATE_BUCKET=$STATE_BUCKET"
-echo "LOCK_TABLE=$LOCK_TABLE"
+echo "==> Billing alarm provisioned. Confirm the SNS subscription email sent to $BILLING_EMAIL."
