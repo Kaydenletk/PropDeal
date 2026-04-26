@@ -1,53 +1,37 @@
 import json
-import logging
 import os
-
+import re
 import boto3
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+from shared.log import log
+
+S3 = boto3.client("s3")
+RAW_BUCKET = os.environ["RAW_BUCKET"]
+CLEAN_BUCKET = os.environ["CLEAN_BUCKET"]
+
+PHONE_RE = re.compile(r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")
+EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
 
 
-def transform_record(raw: dict) -> dict:
-    return {
-        "listing_id": raw.get("id"),
-        "address": raw.get("formattedAddress"),
-        "city": raw.get("city"),
-        "state": raw.get("state"),
-        "price": raw.get("price"),
-        "bedrooms": raw.get("bedrooms"),
-        "bathrooms": raw.get("bathrooms"),
-        "sqft": raw.get("squareFootage"),
-        "year_built": raw.get("yearBuilt"),
-        "description": raw.get("description"),
-        "latitude": raw.get("latitude"),
-        "longitude": raw.get("longitude"),
-    }
+def redact(text: str | None) -> str | None:
+    if not text:
+        return text
+    text = PHONE_RE.sub("[PHONE_REDACTED]", text)
+    text = EMAIL_RE.sub("[EMAIL_REDACTED]", text)
+    return text
 
 
-def lambda_handler(event, context):
-    raw_bucket = event["raw_bucket"]
+def handler(event, _ctx):
     raw_key = event["raw_key"]
-    clean_bucket = event["clean_bucket"]
+    obj = S3.get_object(Bucket=RAW_BUCKET, Key=raw_key)
+    listings = json.loads(obj["Body"].read())
 
-    s3 = boto3.client("s3")
-    obj = s3.get_object(Bucket=raw_bucket, Key=raw_key)
-    raw_records = json.loads(obj["Body"].read())
+    cleaned = []
+    for rec in listings:
+        rec["description"] = redact(rec.get("description"))
+        cleaned.append(rec)
 
-    clean_records = [transform_record(r) for r in raw_records if r.get("id")]
-
-    clean_key = raw_key.replace("listings/", "clean-listings/")
-    s3.put_object(
-        Bucket=clean_bucket,
-        Key=clean_key,
-        Body=json.dumps(clean_records).encode("utf-8"),
-        ContentType="application/json",
-    )
-
-    logger.info(f"Transformed {len(clean_records)} records to s3://{clean_bucket}/{clean_key}")
-    return {
-        "statusCode": 200,
-        "records": len(clean_records),
-        "clean_bucket": clean_bucket,
-        "clean_key": clean_key,
-    }
+    clean_key = raw_key.replace("raw/", "clean/")
+    S3.put_object(Bucket=CLEAN_BUCKET, Key=clean_key, Body=json.dumps(cleaned).encode())
+    log("info", "transformed", count=len(cleaned), key=clean_key)
+    return {"clean_key": clean_key, "count": len(cleaned)}
